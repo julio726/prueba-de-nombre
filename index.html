@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de Gestión de Comunidad Energética Renovable - Proyecto Académico">
+    <meta name="author" content="Proyecto Académico - Algoritmos y Programación">
+    <title>Comunidad Energética Renovable | Simulador Corregido</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --color-primary: #667eea; --color-secondary: #764ba2; --color-solar: #ffd700;
+            --color-eolica: #87ceeb; --color-bg-dark: #0a0e27; --color-bg-medium: #1a1a2e;
+            --color-bg-light: #16213e; --color-text: #e0e0e0; --color-success: #43e97b;
+            --color-warning: #ffa726; --color-danger: #f5576c;
+            --shadow-lg: 0 15px 40px rgba(0,0,0,0.5);
+            --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, var(--color-bg-dark) 0%, var(--color-bg-medium) 50%, var(--color-bg-light) 100%); min-height: 100vh; padding: 20px; color: var(--color-text); overflow-x: hidden; line-height: 1.6; }
+        @keyframes float { 0%,100%{transform:translateY(0) translateX(0);opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{transform:translateY(-100vh) translateX(100px);opacity:0;} }
+        @keyframes slideDown { from{transform:translateY(-50px);opacity:0;}to{transform:translateY(0);opacity:1;} }
+        @keyframes slideUp { from{transform:translateY(50px);opacity:0;}to{transform:translateY(0);opacity:1;} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);} }
+        @keyframes glow { from{text-shadow:0 0 20px rgba(102,126,234,0.8);}to{text-shadow:0 0 30px rgba(102,126,234,1),0 0 40px rgba(102,126,234,0.5);} }
+        @keyframes sunPulse { 0%,100%{transform:scale(1) rotate(0deg);filter:brightness(1);}50%{transform:scale(1.1) rotate(180deg);filter:brightness(1.3);} }
+        @keyframes windTurbine { from{transform:rotate(0deg);}to{transform:rotate(360deg);} }
+        @keyframes shimmer { 0%{transform:translateX(-100%) translateY(-100%) rotate(45deg);}100%{transform:translateX(100%) translateY(100%) rotate(45deg);} }
+        @keyframes progressShine { from{transform:translateX(-100%);}to{transform:translateX(100%);} }
+        @keyframes bounce { 0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);} }
+        @keyframes arrowPulse { 0%,100%{opacity:1;transform:translateX(0);}50%{opacity:0.5;transform:translateX(10px);} }
+        .particles { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0; }
+        .particle { position:absolute;width:4px;height:4px;background:rgba(102,126,234,0.6);border-radius:50%;animation:float 15s infinite; }
+        .container { max-width:1600px;margin:0 auto;position:relative;z-index:1; }
+        header { background:rgba(15,20,50,0.95);padding:30px;border-radius:20px;box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,0.1);margin-bottom:30px;text-align:center;border:1px solid rgba(102,126,234,0.3);backdrop-filter:blur(10px);animation:slideDown 0.8s ease-out; }
+        header h1 { color:#fff;margin-bottom:10px;font-size:2.5em;animation:glow 2s ease-in-out infinite alternate; }
+        .subtitle { color:#a0a0a0;font-size:1.1em;margin-bottom:20px; }
+        .academic-info { display:inline-block;background:rgba(102,126,234,0.2);padding:10px 20px;border-radius:10px;border:1px solid rgba(102,126,234,0.4);font-size:0.9em;color:#667eea; }
+        .controls-section { background:rgba(15,20,50,0.95);padding:30px;border-radius:20px;box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,0.1);margin-bottom:30px;border:1px solid rgba(102,126,234,0.3);backdrop-filter:blur(10px);animation:slideUp 0.8s ease-out 0.2s both; }
+        .control-section-title { color:#fff;font-size:1.5em;margin-bottom:25px;display:flex;align-items:center;gap:10px; }
+        .control-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:25px; }
+        .control-group { background:rgba(255,255,255,0.05);padding:20px;border-radius:12px;border:1px solid rgba(102,126,234,0.2); }
+        .control-label { display:flex;justify-content:space-between;margin-bottom:12px;font-weight:600;color:#fff;font-size:1.05em; }
+        .control-value { color:var(--color-primary);font-weight:bold; }
+        input[type="range"] { width:100%;height:8px;border-radius:10px;background:rgba(255,255,255,0.1);outline:none;-webkit-appearance:none;appearance:none;cursor:pointer; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--color-primary),var(--color-secondary));cursor:pointer;box-shadow:0 0 15px rgba(102,126,234,0.8);transition:var(--transition); }
+        input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.3);box-shadow:0 0 25px rgba(102,126,234,1); }
+        .scenario-selector { background:rgba(15,20,50,0.95);padding:30px;border-radius:20px;box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,0.1);margin-bottom:30px;border:1px solid rgba(102,126,234,0.3);backdrop-filter:blur(10px);animation:slideUp 0.8s ease-out 0.3s both; }
+        .scenario-buttons { display:flex;gap:15px;flex-wrap:wrap;justify-content:center;margin-top:20px; }
+        .scenario-btn { padding:18px 35px;border:2px solid transparent;border-radius:15px;cursor:pointer;font-size:1em;font-weight:bold;transition:var(--transition);box-shadow:0 6px 20px rgba(0,0,0,0.3);position:relative;overflow:hidden;color:white; }
+        .scenario-btn::before { content:'';position:absolute;top:50%;left:50%;width:0;height:0;border-radius:50%;background:rgba(255,255,255,0.3);transform:translate(-50%,-50%);transition:width 0.6s,height 0.6s; }
+        .scenario-btn:hover::before { width:300px;height:300px; }
+        .scenario-btn:hover { transform:translateY(-5px) scale(1.05);box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+        .scenario-btn.active { border-color:#fff;box-shadow:0 0 25px rgba(255,255,255,0.5); }
+        .btn-alta-generacion { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); }
+        .btn-alta-demanda { background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%); }
+        .btn-equilibrio { background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%); }
+        .btn-noche { background:linear-gradient(135deg,#434343 0%,#000000 100%); }
+        .dashboard { display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:25px;margin-bottom:30px; }
+        .card { background:rgba(15,20,50,0.95);padding:30px;border-radius:20px;box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,0.1);border:1px solid rgba(102,126,234,0.3);backdrop-filter:blur(10px);transition:var(--transition);animation:fadeIn 0.8s ease-out; }
+        .card:hover { transform:translateY(-8px);box-shadow:0 25px 60px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.15);border-color:rgba(102,126,234,0.6); }
+        .card.full-width { grid-column:span 2; }
+        .card h2 { color:#fff;margin-bottom:25px;font-size:1.4em;border-bottom:3px solid var(--color-primary);padding-bottom:12px;display:flex;align-items:center;gap:12px; }
+        .stats-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:18px; }
+        .stat-item { background:linear-gradient(135deg,var(--color-bg-medium) 0%,var(--color-bg-light) 100%);padding:25px;border-radius:15px;text-align:center;border:1px solid rgba(102,126,234,0.3);transition:var(--transition);position:relative;overflow:hidden; }
+        .stat-item::before { content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent,rgba(102,126,234,0.1),transparent);animation:shimmer 3s infinite; }
+        .stat-item:hover { border-color:var(--color-primary);box-shadow:0 0 25px rgba(102,126,234,0.5);transform:scale(1.05); }
+        .stat-value { font-size:2.2em;font-weight:bold;margin-bottom:8px;color:var(--color-primary);text-shadow:0 0 15px rgba(102,126,234,0.5);position:relative;z-index:1; }
+        .stat-label { font-size:0.95em;opacity:0.85;position:relative;z-index:1; }
+        .chart-container { position:relative;height:320px;margin-top:20px; }
+        .producers-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:25px;max-height:700px;overflow-y:auto;padding:10px; }
+        .producer-card { background:linear-gradient(135deg,var(--color-bg-medium) 0%,var(--color-bg-light) 100%);padding:20px;border-radius:18px;border:2px solid rgba(102,126,234,0.3);transition:var(--transition);position:relative;overflow:hidden;cursor:pointer; }
+        .producer-card:hover { transform:scale(1.03);border-color:var(--color-primary);box-shadow:0 12px 35px rgba(102,126,234,0.4); }
+        .producer-card.solar { border-left:5px solid var(--color-solar); }
+        .producer-card.eolica { border-left:5px solid var(--color-eolica); }
+        .producer-image { width:100%;height:150px;object-fit:cover;border-radius:10px;margin-bottom:15px;border:2px solid rgba(255,255,255,0.1); }
+        .producer-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:15px; }
+        .producer-icon { font-size:3em;position:relative;width:65px;height:65px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.1);border-radius:50%; }
+        .producer-icon.solar { animation:sunPulse 3s ease-in-out infinite; }
+        .producer-icon.eolica { animation:windTurbine 2s linear infinite; }
+        .producer-name { font-weight:bold;color:#fff;font-size:1.15em;margin-bottom:5px; }
+        .producer-type-badge { display:inline-block;padding:5px 12px;border-radius:20px;font-size:0.85em;font-weight:bold;margin-top:5px; }
+        .badge-solar { background:rgba(255,215,0,0.2);color:var(--color-solar);border:1px solid var(--color-solar); }
+        .badge-eolica { background:rgba(135,206,235,0.2);color:var(--color-eolica);border:1px solid var(--color-eolica); }
+        .producer-stats { display:flex;justify-content:space-between;margin-top:15px;font-size:0.95em; }
+        .producer-stat { text-align:center; }
+        .producer-stat-value { font-size:1.4em;font-weight:bold;color:var(--color-primary); }
+        .producer-stat-label { font-size:0.8em;opacity:0.7; }
+        .producer-progress { width:100%;height:10px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin-top:18px;position:relative; }
+        .producer-progress-fill { height:100%;border-radius:10px;transition:width 1s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden; }
+        .producer-progress-fill.solar { background:linear-gradient(90deg,var(--color-solar),#ffed4e); }
+        .producer-progress-fill.eolica { background:linear-gradient(90deg,var(--color-eolica),#b0e0e6); }
+        .producer-progress-fill::after { content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);animation:progressShine 2s infinite; }
+        .energy-flow { display:flex;align-items:center;justify-content:space-around;padding:25px;background:linear-gradient(135deg,rgba(26,26,46,0.8) 0%,rgba(22,33,62,0.8) 100%);border-radius:18px;margin-top:25px;border:1px solid rgba(102,126,234,0.3); }
+        .flow-item { text-align:center;padding:15px;transition:var(--transition); }
+        .flow-item:hover { transform:scale(1.1); }
+        .flow-icon { font-size:3em;margin-bottom:10px;animation:bounce 2s ease-in-out infinite; }
+        .flow-arrow { font-size:2.5em;color:var(--color-primary);animation:arrowPulse 1.5s ease-in-out infinite; }
+        .progress-bar { width:100%;height:30px;background:rgba(255,255,255,0.1);border-radius:15px;overflow:hidden;margin-top:12px;position:relative; }
+        .progress-fill { height:100%;background:linear-gradient(90deg,var(--color-primary) 0%,var(--color-secondary) 100%);transition:width 1s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;justify-content:center;color:white;font-size:0.95em;font-weight:bold;position:relative;overflow:hidden; }
+        .progress-fill::after { content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);animation:progressShine 2s infinite; }
+        .progress-fill.excedentes { background:linear-gradient(90deg,#f093fb 0%,var(--color-danger) 100%); }
+        .documentation { background:rgba(15,20,50,0.95);padding:30px;border-radius:20px;box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,0.1);margin-bottom:30px;border:1px solid rgba(102,126,234,0.3);backdrop-filter:blur(10px); }
+        .doc-section { margin-bottom:25px; }
+        .doc-section h3 { color:var(--color-primary);margin-bottom:15px;font-size:1.3em; }
+        .doc-section p, .doc-section ul { margin-bottom:10px;line-height:1.8; }
+        .doc-section ul { padding-left:25px; }
+        .doc-section li { margin-bottom:8px; }
+        .code-block { background:rgba(0,0,0,0.3);padding:15px;border-radius:10px;border-left:4px solid var(--color-primary);font-family:'Courier New',monospace;font-size:0.9em;overflow-x:auto;margin:10px 0; }
+        .action-buttons { display:flex;gap:15px;justify-content:center;flex-wrap:wrap;margin-top:20px; }
+        .btn { padding:15px 30px;border:none;border-radius:12px;cursor:pointer;font-size:1em;font-weight:bold;transition:var(--transition);box-shadow:0 6px 20px rgba(0,0,0,0.3);color:white;background:linear-gradient(135deg,var(--color-primary),var(--color-secondary)); }
+        .btn:hover { transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+        .btn-secondary { background:linear-gradient(135deg,var(--color-success),#38f9d7);color:#000; }
+        .btn-report { background:linear-gradient(135deg,#fa709a 0%,#fee140 100%);color:#000; }
+        /* >>> NUEVO: estilo del campo de nombre <<< */
+        #inputNombreInforme { width:100%;padding:14px 16px;border-radius:10px;background:rgba(0,0,0,0.35);border:1px solid rgba(102,126,234,0.4);color:#fff;font-size:1.05em;outline:none;transition:all 0.3s ease; }
+        #inputNombreInforme:focus { border-color:var(--color-primary);box-shadow:0 0 15px rgba(102,126,234,0.6); }
+        ::-webkit-scrollbar { width:12px; }
+        ::-webkit-scrollbar-track { background:rgba(255,255,255,0.05);border-radius:10px; }
+        ::-webkit-scrollbar-thumb { background:var(--color-primary);border-radius:10px; }
+        ::-webkit-scrollbar-thumb:hover { background:var(--color-secondary); }
+        @media (max-width:768px) { .dashboard{grid-template-columns:1fr;} .card.full-width{grid-column:1;} .scenario-buttons{flex-direction:column;} .scenario-btn{width:100%;} .producers-grid{grid-template-columns:1fr;} .control-grid{grid-template-columns:1fr;} header h1{font-size:1.8em;} }
+        .card:nth-child(1){animation-delay:0.1s;} .card:nth-child(2){animation-delay:0.2s;} .card:nth-child(3){animation-delay:0.3s;} .card:nth-child(4){animation-delay:0.4s;} .card:nth-child(5){animation-delay:0.5s;} .card:nth-child(6){animation-delay:0.6s;}
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+
+    <div class="container">
+        <header>
+            <h1>⚡ Comunidad Energética Renovable</h1>
+            <p class="subtitle">Sistema Inteligente de Gestión y Distribución de Energía Solar y Eólica</p>
+            <div class="academic-info"><strong>Proyecto Académico - Algoritmos y Programación</strong> | Universidad | 2026</div>
+        </header>
+
+        <div class="controls-section">
+            <h2 class="control-section-title">🎛️ Panel de Control de Parámetros</h2>
+            <div class="control-grid">
+                <div class="control-group">
+                    <div class="control-label"><span>☀️ Intensidad de Radiación Solar</span><span class="control-value" id="solarValue">70%</span></div>
+                    <input type="range" id="solarSlider" min="0" max="100" value="70" oninput="updateParameters()">
+                    <small style="color:#888;margin-top:8px;display:block;">Controla la eficiencia de los paneles solares (0-100%)</small>
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>💨 Velocidad del Viento</span><span class="control-value" id="windValue">50%</span></div>
+                    <input type="range" id="windSlider" min="0" max="100" value="50" oninput="updateParameters()">
+                    <small style="color:#888;margin-top:8px;display:block;">Controla la generación de turbinas eólicas (0-100%)</small>
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>🏭 Demanda Energética de la Comunidad</span><span class="control-value" id="demandValue">50%</span></div>
+                    <input type="range" id="demandSlider" min="0" max="100" value="50" oninput="updateParameters()">
+                    <small style="color:#888;margin-top:8px;display:block;">Controla el consumo total de la comunidad (0-100%)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="scenario-selector">
+            <h2 class="control-section-title">📊 Escenarios de Simulación Predefinidos</h2>
+            <div class="scenario-buttons">
+                <button class="scenario-btn btn-alta-generacion" onclick="changeScenario('altaGeneracion')">☀️ Alta Generación Solar</button>
+                <button class="scenario-btn btn-alta-demanda" onclick="changeScenario('altaDemanda')">🏭 Alta Demanda</button>
+                <button class="scenario-btn btn-equilibrio" onclick="changeScenario('equilibrio')">⚖️ Equilibrio Óptimo</button>
+                <button class="scenario-btn btn-noche" onclick="changeScenario('noche')">🌙 Generación Nocturna</button>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2>📈 Resumen Energético en Tiempo Real</h2>
+                <div class="stats-grid">
+                    <div class="stat-item"><div class="stat-value" id="totalGeneracion">0</div><div class="stat-label">kWh Generados</div></div>
+                    <div class="stat-item"><div class="stat-value" id="totalConsumo">0</div><div class="stat-label">kWh Consumidos</div></div>
+                    <div class="stat-item"><div class="stat-value" id="energiaCompartida">0</div><div class="stat-label">kWh Compartidos</div></div>
+                    <div class="stat-item"><div class="stat-value" id="porcentajeRenovable">0%</div><div class="stat-label">Energía Renovable</div></div>
+                </div>
+            </div>
+            <div class="card"><h2>⚡ Generación vs Consumo Horario</h2><div class="chart-container"><canvas id="generationChart"></canvas></div></div>
+            <div class="card">
+                <h2>🔄 Distribución y Flujo de Energía</h2>
+                <div class="chart-container"><canvas id="distributionChart"></canvas></div>
+                <div class="energy-flow">
+                    <div class="flow-item"><div class="flow-icon">🏭</div><div>Productores</div><div id="flowProductores" style="color:var(--color-primary);font-weight:bold;font-size:1.2em;">0 kWh</div></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-item"><div class="flow-icon">🏘️</div><div>Comunidad</div><div id="flowComunidad" style="color:var(--color-primary);font-weight:bold;font-size:1.2em;">0 kWh</div></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-item"><div class="flow-icon">🔋</div><div>Red Eléctrica</div><div id="flowRed" style="color:var(--color-primary);font-weight:bold;font-size:1.2em;">0 kWh</div></div>
+                </div>
+            </div>
+            <div class="card"><h2>🌞 Composición del Mix Energético</h2><div class="chart-container"><canvas id="mixChart"></canvas></div></div>
+            <div class="card full-width"><h2>👥 Infraestructura de Productores de la Comunidad</h2><div class="producers-grid" id="producersGrid"></div></div>
+            <div class="card">
+                <h2>⚖️ Balance Energético Comunitario</h2>
+                <div class="stats-grid">
+                    <div class="stat-item"><div class="stat-value" id="balanceComunitario">0</div><div class="stat-label">Balance (kWh)</div></div>
+                    <div class="stat-item"><div class="stat-value" id="demandaCubierta">0%</div><div class="stat-label">Demanda cubierta</div></div>
+                    <div class="stat-item"><div class="stat-value" id="energiaLocal">0</div><div class="stat-label">Energía usada localmente</div></div>
+                    <div class="stat-item"><div class="stat-value" id="energiaExportada">0</div><div class="stat-label">Excedente exportado</div></div>
+                </div>
+                <div class="doc-section" style="margin-top:20px;"><p><strong>Regla de reparto:</strong> primero se atiende el consumo directo, luego se distribuye la energía sobrante entre consumidores de la comunidad y únicamente el remanente se exporta a la red.</p></div>
+            </div>
+            <div class="card">
+                <h2>📊 Análisis de Autoconsumo y Excedentes</h2>
+                <div class="chart-container"><canvas id="selfConsumptionChart"></canvas></div>
+                <div style="margin-top:25px;">
+                    <div style="margin-bottom:20px;"><div style="display:flex;justify-content:space-between;margin-bottom:8px;font-weight:bold;"><span>Autoconsumo Directo</span><span id="autoconsumoPercent" style="color:var(--color-success);">0%</span></div><div class="progress-bar"><div class="progress-fill" id="autoconsumoBar" style="width:0%">0%</div></div></div>
+                    <div><div style="display:flex;justify-content:space-between;margin-bottom:8px;font-weight:bold;"><span>Excedentes Exportados a Red</span><span id="excedentesPercent" style="color:var(--color-danger);">0%</span></div><div class="progress-bar"><div class="progress-fill excedentes" id="excedentesBar" style="width:0%">0%</div></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="documentation">
+            <h2 class="control-section-title">📚 Documentación Técnica del Proyecto</h2>
+            <div class="doc-section"><h3>1. Descripción del Sistema</h3><p>Este sistema representa una <strong>Comunidad Energética Renovable</strong> que integra fuentes de energía solar fotovoltaica y eólica para el abastecimiento de una comunidad. El algoritmo implementado gestiona la distribución óptima de energía entre los productores y consumidores, minimizando la dependencia de la red eléctrica convencional.</p></div>
+            <div class="doc-section"><h3>2. Algoritmos Implementados</h3><ul><li><strong>Algoritmo de Distribución de Carga:</strong> Asigna la energía generada prioritariamente al autoconsumo, luego al compartir comunitario y finalmente a excedentes.</li><li><strong>Algoritmo de Balance Energético:</strong> Calcula en tiempo real el equilibrio entre generación y demanda.</li><li><strong>Algoritmo de Optimización:</strong> Ajusta los parámetros de generación según las condiciones ambientales (radiación solar, velocidad del viento).</li><li><strong>Estructuras de Datos:</strong> Arrays de objetos para productores, mapas para almacenamiento de métricas temporales.</li></ul></div>
+            <div class="doc-section"><h3>3. Fórmulas Matemáticas Utilizadas</h3><div class="code-block">Producción Solar = Capacidad_Instalada × Factor_Radiación × Eficiencia_Paneles<br><br>Producción Eólica = Capacidad_Instalada × Factor_Viento<br><br>Balance_Energético = Σ(Generación) - Σ(Consumo)<br><br>Porcentaje_Autoconsumo = (Autoconsumo / Generación_Total) × 100</div></div>
+            <div class="doc-section"><h3>4. Características Técnicas</h3><ul><li><strong>Lenguaje:</strong> JavaScript (ES6+)</li><li><strong>Arquitectura:</strong> MVC (Modelo-Vista-Controlador)</li><li><strong>Visualización:</strong> Chart.js para gráficos interactivos</li><li><strong>Animaciones:</strong> CSS3 keyframes y transitions</li><li><strong>Responsive:</strong> Grid y Flexbox para adaptación a dispositivos</li><li><strong>Actualización:</strong> Tiempo real cada 5 segundos con variaciones aleatorias</li></ul></div>
+            <div class="doc-section"><h3>5. Escenarios de Simulación</h3><ul><li><strong>Alta Generación:</strong> Máxima radiación solar (mediodía) con consumo moderado</li><li><strong>Alta Demanda:</strong> Hora pico vespertina con generación reducida</li><li><strong>Equilibrio:</strong> Balance óptimo entre generación y consumo</li><li><strong>Noche:</strong> Generación principalmente eólica con bajo consumo</li></ul></div>
+
+            <!-- >>> NUEVO: campo para que la persona escriba su nombre <<< -->
+            <div class="doc-section" style="margin-top:25px;">
+                <h3>👤 Tu nombre para el informe</h3>
+                <p style="color:#a0a0a0;margin-bottom:12px;">Escribe tu nombre tal como quieres que aparezca en el PDF del informe.</p>
+                <input type="text" id="inputNombreInforme" placeholder="Ej.: Julio Daniel Vides Payares" maxlength="80">
+                <small style="display:block;margin-top:8px;color:#888;font-size:0.85em;">Si lo dejas vacío, el informe se generará como "Anónimo".</small>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-report" onclick="generarYEnviarInforme()">📧 Generar Informe y Enviar por Email</button>
+                <button class="btn" onclick="exportData()">📥 Exportar Datos (JSON)</button>
+                <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimir Reporte</button>
+                <button class="btn" onclick="resetSimulation()">🔄 Reiniciar Simulación</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ URL NUEVA del proyecto limpio. Verifícala en el navegador (debe devolver JSON) antes de confiar en el botón.
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzq9u7rqukKlqfF28usO_cWL6lIBolwdxbu0RGHIdpOLVPMWrATVSCNAYMV7GlV6deZOA/exec";
+
+        const CONFIG = {
+            BASE_CONSUMO: 400,
+            UPDATE_INTERVAL: 5000,
+            ANIMATION_DURATION: 1500,
+            PRECIO_KWH: 0.15,
+            PRODUCERS: [
+                { id:1, nombre:"Parque Solar Principal", tipo:"solar", capacidad:150, produccionActual:0, icon:"☀️", imagen:"https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400", descripcion:"Instalación fotovoltaica de gran escala" },
+                { id:2, nombre:"Parque Eólico Norte", tipo:"eolica", capacidad:200, produccionActual:0, icon:"💨", imagen:"https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400", descripcion:"Turbinas eólicas de alta eficiencia" },
+                { id:3, nombre:"Paneles Comunitarios", tipo:"solar", capacidad:100, produccionActual:0, icon:"🔆", imagen:"https://images.unsplash.com/photo-1611365892117-00ac5ef43c90?w=400", descripcion:"Instalación solar compartida" },
+                { id:4, nombre:"Parque Eólico Sur", tipo:"eolica", capacidad:180, produccionActual:0, icon:"🌬️", imagen:"https://images.unsplash.com/photo-1532601451126-8e1c1e2f9a8b?w=400", descripcion:"Generación eólica complementaria" },
+                { id:5, nombre:"Solar Residencial", tipo:"solar", capacidad:80, produccionActual:0, icon:"🌞", imagen:"https://images.unsplash.com/photo-1592833159057-65a2845730bd?w=400", descripcion:"Paneles en viviendas particulares" },
+                { id:6, nombre:"Mini Eólica Local", tipo:"eolica", capacidad:60, produccionActual:0, icon:"🌀", imagen:"https://images.unsplash.com/photo-1548316799-4c0f6c2e4b5f?w=400", descripcion:"Turbinas de pequeña escala" }
+            ]
+        };
+
+        const ESCENARIOS = {
+            altaGeneracion: { nombre:"Alta Generación Solar", hora:13, factores:{ solar:0.95, eolica:0.6, consumo:0.5 }, descripcion:"Máxima producción solar al mediodía con consumo moderado" },
+            altaDemanda: { nombre:"Alta Demanda", hora:19, factores:{ solar:0.3, eolica:0.4, consumo:1.0 }, descripcion:"Hora pico de consumo vespertino" },
+            equilibrio: { nombre:"Equilibrio Óptimo", hora:11, factores:{ solar:0.7, eolica:0.5, consumo:0.7 }, descripcion:"Balance entre generación y consumo" },
+            noche: { nombre:"Generación Nocturna", hora:2, factores:{ solar:0, eolica:0.7, consumo:0.3 }, descripcion:"Generación principalmente eólica nocturna" }
+        };
+
+        let estadoActual = { escenario:'equilibrio', productores:[...CONFIG.PRODUCERS], charts:{} };
+
+        // ===== FUNCIONES DE ENVÍO DE INFORMES =====
+        function leerValorDOM(id) {
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            const val = parseFloat(el.textContent.replace(/[%kWh\s]/gi, ''));
+            return isNaN(val) ? 0 : val;
+        }
+
+        // >>> NUEVO: lee el nombre escrito por la persona <<<
+        function obtenerNombreUsuario() {
+            const input = document.getElementById('inputNombreInforme');
+            if (!input) return "Anónimo";
+            const n = input.value.trim();
+            return n.length > 0 ? n : "Anónimo";
+        }
+
+        function enviarInforme(datosSimulacion) {
+            console.log("📤 Enviando:", datosSimulacion);
+            const btn = document.querySelector('.btn-report');
+            const original = btn ? btn.innerHTML : '';
+            if (btn) { btn.innerHTML = '⏳ Generando informe...'; btn.disabled = true; }
+
+            fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(datosSimulacion) })
+            .then(r => r.text())
+            .then(text => {
+                console.log("📩 Respuesta cruda del servidor:", text);
+                if (/introuvable|not\s*found|service|exception/i.test(text) && !/^\s*\{/.test(text)) {
+                    throw new Error("SCRIPT_NO_PUBLICADO::" + text.trim());
+                }
+                let data;
+                try { data = JSON.parse(text); } catch (e) { throw new Error("RESPUESTA_NO_JSON::" + text.trim().slice(0,300)); }
+                if (data.result === "success") {
+                    alert("✅ ¡INFORME GENERADO!\n\n📧 PDF enviado a:\njuliodanielvidespayares2@gmail.com\n👤 A nombre de: " + datosSimulacion.nombre + "\n📊 Fila guardada en la hoja.\n\n💡 Revisa SPAM si no lo ves.");
+                } else {
+                    alert("❌ Error del servidor:\n" + (data.message || JSON.stringify(data)));
+                }
+            })
+            .catch(err => {
+                console.error("❌", err);
+                if (err.message.startsWith("SCRIPT_NO_PUBLICADO")) {
+                    alert("🚨 El problema está en Google Apps Script (la URL publicada no tiene doGet/doPost).\n\nSOLUCIÓN: script.google.com ▸ Implementar  Aplicación web ▸ 'Quién tiene acceso: Cualquier persona' ▸ Nueva versión  copia la URL y pégala en SCRIPT_URL.\n\nDetalle: " + err.message.replace("SCRIPT_NO_PUBLICADO::",""));
+                } else if (err.message.startsWith("RESPUESTA_NO_JSON")) {
+                    alert("⚠️ Respuesta no JSON:\n" + err.message.replace("RESPUESTA_NO_JSON::",""));
+                } else {
+                    alert("❌ Error de conexión:\n" + err.message);
+                }
+            })
+            .finally(() => { if (btn) { btn.innerHTML = original || '📧 Generar Informe y Enviar por Email'; btn.disabled = false; } });
+        }
+
+        function generarYEnviarInforme() {
+            try {
+                const totalGeneracion   = leerValorDOM('totalGeneracion');
+                const totalConsumo      = leerValorDOM('totalConsumo');
+                const energiaCompartida = leerValorDOM('energiaCompartida');
+                const balanceComunitario= leerValorDOM('balanceComunitario');
+                const porcentajeRenovable = leerValorDOM('porcentajeRenovable');
+                const demandaCubierta   = leerValorDOM('demandaCubierta');
+
+                if (totalGeneracion === 0 && totalConsumo === 0) {
+                    alert("⚠️ La simulación aún no tiene valores.\nEspera 2-3 segundos a que el dashboard cargue y vuelve a pulsar.");
+                    return;
+                }
+
+                // >>> NUEVO: nombre real del usuario <<<
+                const nombreUsuario = obtenerNombreUsuario();
+
+                const ahorroEstimado = (totalGeneracion * CONFIG.PRECIO_KWH).toFixed(2);
+                const esc = ESCENARIOS[estadoActual.escenario] || { nombre:"Desconocido", hora:0, descripcion:"" };
+
+                const observaciones = [
+                    "Generado por: " + nombreUsuario,
+                    "Escenario: " + esc.nombre,
+                    "Hora simulada: " + esc.hora + ":00",
+                    "Descripción: " + (esc.descripcion || "N/A"),
+                    "Energía compartida: " + energiaCompartida + " kWh",
+                    "% Renovable: " + porcentajeRenovable + "%",
+                    "Balance: " + balanceComunitario + " kWh",
+                    "Demanda cubierta: " + demandaCubierta + "%",
+                    "Ahorro estimado: " + ahorroEstimado + " €",
+                    "Fecha: " + new Date().toLocaleString('es-ES')
+                ].join("\n");
+
+                const datosParaEnviar = {
+                    nombre: nombreUsuario,                                  // <<< ahora es el nombre de la persona
+                    correo: "juliodanielvidespayares2@gmail.com",
+                    energiaGenerada: totalGeneracion,
+                    energiaConsumida: totalConsumo,
+                    ahorro: parseFloat(ahorroEstimado),
+                    observaciones: observaciones
+                };
+
+                console.log("📦 Datos para:", nombreUsuario, datosParaEnviar);
+                enviarInforme(datosParaEnviar);
+            } catch (error) {
+                console.error("❌ Error al preparar informe:", error);
+                alert("❌ Error interno al preparar el informe:\n" + error.message);
+            }
+        }
+
+        // ===== INICIALIZACIÓN Y CÁLCULO =====
+        function createParticles() {
+            const c = document.getElementById('particles');
+            for (let i=0;i<50;i++){ const p=document.createElement('div'); p.className='particle'; p.style.left=Math.random()*100+'%'; p.style.animationDelay=Math.random()*15+'s'; p.style.animationDuration=(Math.random()*10+10)+'s'; c.appendChild(p); }
+        }
+
+        function initCharts() {
+            const genCtx=document.getElementById('generationChart').getContext('2d');
+            estadoActual.charts.generation=new Chart(genCtx,{type:'line',data:{labels:['00:00','04:00','08:00','12:00','16:00','20:00','24:00'],datasets:[{label:'Generación Solar',data:[],borderColor:'#ffd700',backgroundColor:'rgba(255,215,0,0.1)',tension:0.4,fill:true,borderWidth:3},{label:'Generación Eólica',data:[],borderColor:'#87ceeb',backgroundColor:'rgba(135,206,235,0.1)',tension:0.4,fill:true,borderWidth:3},{label:'Consumo',data:[],borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,0.1)',tension:0.4,fill:true,borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:CONFIG.ANIMATION_DURATION,easing:'easeInOutQuart'},interaction:{intersect:false,mode:'index'},plugins:{legend:{labels:{color:'#e0e0e0'}},tooltip:{callbacks:{label:(c)=>c.dataset.label+": "+c.parsed.y.toFixed(1)+" kWh"}}},scales:{y:{ticks:{color:'#e0e0e0'},grid:{color:'rgba(255,255,255,0.1)'}},x:{ticks:{color:'#e0e0e0'},grid:{color:'rgba(255,255,255,0.1)'}}}}});
+            const distCtx=document.getElementById('distributionChart').getContext('2d');
+            estadoActual.charts.distribution=new Chart(distCtx,{type:'bar',data:{labels:['Autoconsumo','Compartida','Excedentes','Importada'],datasets:[{label:'Energía (kWh)',data:[],backgroundColor:['rgba(67,233,123,0.8)','rgba(102,126,234,0.8)','rgba(245,87,108,0.8)','rgba(255,167,38,0.8)'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:CONFIG.ANIMATION_DURATION},plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#e0e0e0'},grid:{color:'rgba(255,255,255,0.1)'}},x:{ticks:{color:'#e0e0e0'},grid:{color:'rgba(255,255,255,0.1)'}}}}});
+            const mixCtx=document.getElementById('mixChart').getContext('2d');
+            estadoActual.charts.mix=new Chart(mixCtx,{type:'doughnut',data:{labels:['Solar','Eólica','Red Eléctrica'],datasets:[{data:[],backgroundColor:['rgba(255,215,0,0.8)','rgba(135,206,235,0.8)','rgba(158,158,158,0.8)'],borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:CONFIG.ANIMATION_DURATION},plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',padding:20}}}}});
+            const selfCtx=document.getElementById('selfConsumptionChart').getContext('2d');
+            estadoActual.charts.selfConsumption=new Chart(selfCtx,{type:'pie',data:{labels:['Autoconsumo Directo','Compartido en Comunidad','Exportado a Red'],datasets:[{data:[],backgroundColor:['rgba(67,233,123,0.8)','rgba(102,126,234,0.8)','rgba(245,87,108,0.8)'],borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:CONFIG.ANIMATION_DURATION},plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',padding:20}}}}});
+        }
+
+        function calcularProduccion(fs,fe){ let ts=0,te=0; estadoActual.productores.forEach(p=>{ if(p.tipo==='solar'){ p.produccionActual=p.capacidad*fs; ts+=p.produccionActual; } else { p.produccionActual=p.capacidad*fe; te+=p.produccionActual; } }); return {solar:ts,eolica:te,total:ts+te}; }
+        function calcularConsumo(fc){ return CONFIG.BASE_CONSUMO*fc; }
+        function distribuirEnergia(prod,cons){ const auto=Math.min(cons,prod.total); const rest=Math.max(0,prod.total-auto); const demRest=Math.max(0,cons-auto); const comp=Math.min(rest,demRest); const exc=Math.max(0,rest-comp); const imp=Math.max(0,demRest-comp); return {autoconsumo:auto,compartida:comp,excedentes:exc,importada:imp,energiaUtilizadaLocalmente:auto+comp}; }
+
+        function updateParameters(){ const s=document.getElementById('solarSlider').value/100; const w=document.getElementById('windSlider').value/100; const d=document.getElementById('demandSlider').value/100; document.getElementById('solarValue').textContent=(s*100).toFixed(0)+'%'; document.getElementById('windValue').textContent=(w*100).toFixed(0)+'%'; document.getElementById('demandValue').textContent=(d*100).toFixed(0)+'%'; calcularYActualizar(s,w,d); }
+        function calcularYActualizar(fs,fe,fc){ const p=calcularProduccion(fs,fe); const c=calcularConsumo(fc); const d=distribuirEnergia(p,c); actualizarDashboard(p,c,d); }
+
+        function actualizarDashboard(prod,cons,dist){
+            const pr=cons>0?Math.min(100,(prod.total/cons*100)):0;
+            animateValue('totalGeneracion',parseFloat(document.getElementById('totalGeneracion').textContent)||0,prod.total);
+            animateValue('totalConsumo',parseFloat(document.getElementById('totalConsumo').textContent)||0,cons);
+            animateValue('energiaCompartida',parseFloat(document.getElementById('energiaCompartida').textContent)||0,dist.compartida);
+            document.getElementById('porcentajeRenovable').textContent=pr.toFixed(1)+'%';
+            const bal=prod.total-cons; const dc=cons>0?((dist.autoconsumo+dist.compartida)/cons)*100:0;
+            document.getElementById('balanceComunitario').textContent=bal.toFixed(0);
+            document.getElementById('demandaCubierta').textContent=Math.min(100,dc).toFixed(1)+'%';
+            document.getElementById('energiaLocal').textContent=dist.energiaUtilizadaLocalmente.toFixed(0);
+            document.getElementById('energiaExportada').textContent=dist.excedentes.toFixed(0);
+            document.getElementById('flowProductores').textContent=prod.total.toFixed(0)+' kWh';
+            document.getElementById('flowComunidad').textContent=dist.autoconsumo.toFixed(0)+' kWh';
+            const fr=dist.excedentes-dist.importada; document.getElementById('flowRed').textContent=(fr>=0?'+':'')+fr.toFixed(0)+' kWh';
+            updateCharts(prod,cons,dist); updateProducersGrid(); actualizarBarrasProgreso(prod.total,dist);
+        }
+
+        function actualizarBarrasProgreso(tg,dist){ const ap=tg>0?(dist.autoconsumo/tg*100):0; const ep=tg>0?(dist.excedentes/tg*100):0; document.getElementById('autoconsumoPercent').textContent=ap.toFixed(1)+'%'; document.getElementById('autoconsumoBar').style.width=ap+'%'; document.getElementById('autoconsumoBar').textContent=ap.toFixed(0)+'%'; document.getElementById('excedentesPercent').textContent=ep.toFixed(1)+'%'; document.getElementById('excedentesBar').style.width=ep+'%'; document.getElementById('excedentesBar').textContent=ep.toFixed(0)+'%'; }
+
+        function animateValue(id,start,target){ const el=document.getElementById(id); const dur=CONFIG.ANIMATION_DURATION; const t0=performance.now(); function u(t){ const e=t-t0; const p=Math.min(e/dur,1); const ep=1-Math.pow(1-p,4); el.textContent=(start+(target-start)*ep).toFixed(0); if(p<1) requestAnimationFrame(u); } requestAnimationFrame(u); }
+
+        function updateProducersGrid(){ const c=document.getElementById('producersGrid'); c.innerHTML=''; estadoActual.productores.forEach((p,i)=>{ const pc=(p.produccionActual/p.capacidad*100); const d=document.createElement('div'); d.className='producer-card '+p.tipo; d.style.animationDelay=(i*0.1)+'s'; d.innerHTML='<img src="'+p.imagen+'" alt="'+p.nombre+'" class="producer-image"><div class="producer-header"><div><div class="producer-name">'+p.nombre+'</div><span class="producer-type-badge badge-'+p.tipo+'">'+(p.tipo==='solar'?'☀️ Solar':'💨 Eólica')+'</span></div><div class="producer-icon '+p.tipo+'">'+p.icon+'</div></div><p style="font-size:0.85em;color:#888;margin-bottom:10px;">'+p.descripcion+'</p><div class="producer-stats"><div class="producer-stat"><div class="producer-stat-value">'+p.capacidad+'</div><div class="producer-stat-label">kW Capacidad</div></div><div class="producer-stat"><div class="producer-stat-value">'+p.produccionActual.toFixed(1)+'</div><div class="producer-stat-label">kWh Actual</div></div><div class="producer-stat"><div class="producer-stat-value">'+pc.toFixed(0)+'%</div><div class="producer-stat-label">Eficiencia</div></div></div><div class="producer-progress"><div class="producer-progress-fill '+p.tipo+'" style="width:'+pc+'%"></div></div>'; c.appendChild(d); }); }
+
+        function updateCharts(prod,cons,dist){ const esc=ESCENARIOS[estadoActual.escenario]; const f=esc.factores; const ds=[0,0,80,140,100,20,0]; const de=[90,110,70,60,80,100,95]; const dc=[120,100,180,220,200,280,150]; estadoActual.charts.generation.data.datasets[0].data=ds.map(v=>v*f.solar); estadoActual.charts.generation.data.datasets[1].data=de.map(v=>v*f.eolica); estadoActual.charts.generation.data.datasets[2].data=dc.map(v=>v*f.consumo); estadoActual.charts.generation.update(); estadoActual.charts.distribution.data.datasets[0].data=[dist.autoconsumo,dist.compartida,dist.excedentes,dist.importada]; estadoActual.charts.distribution.update(); estadoActual.charts.mix.data.datasets[0].data=[prod.solar,prod.eolica,dist.importada]; estadoActual.charts.mix.update(); estadoActual.charts.selfConsumption.data.datasets[0].data=[dist.autoconsumo,dist.compartida,dist.excedentes]; estadoActual.charts.selfConsumption.update(); }
+
+        function changeScenario(e){ estadoActual.escenario=e; document.querySelectorAll('.scenario-btn').forEach(b=>b.classList.remove('active')); event.target.classList.add('active'); const f=ESCENARIOS[e].factores; document.getElementById('solarSlider').value=f.solar*100; document.getElementById('windSlider').value=f.eolica*100; document.getElementById('demandSlider').value=f.consumo*100; updateParameters(); }
+
+        function exportData(){ const data={timestamp:new Date().toISOString(),escenario:estadoActual.escenario,productores:estadoActual.productores,metricas:{totalGeneracion:document.getElementById('totalGeneracion').textContent,totalConsumo:document.getElementById('totalConsumo').textContent,energiaCompartida:document.getElementById('energiaCompartida').textContent,porcentajeRenovable:document.getElementById('porcentajeRenovable').textContent}}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='comunidad_energetica_'+new Date().getTime()+'.json'; a.click(); URL.revokeObjectURL(url); }
+
+        function resetSimulation(){ estadoActual.escenario='equilibrio'; document.getElementById('solarSlider').value=70; document.getElementById('windSlider').value=50; document.getElementById('demandSlider').value=50; document.querySelectorAll('.scenario-btn').forEach(b=>b.classList.remove('active')); const eb=document.querySelector('.btn-equilibrio'); if(eb) eb.classList.add('active'); updateParameters(); }
+
+        document.addEventListener('DOMContentLoaded',function(){ createParticles(); initCharts(); document.querySelector('.btn-equilibrio').classList.add('active'); updateParameters(); setInterval(()=>{ const ss=document.getElementById('solarSlider'); const ws=document.getElementById('windSlider'); const sc=parseFloat(ss.value); const wc=parseFloat(ws.value); ss.value=Math.max(0,Math.min(100,sc+(Math.random()-0.5)*5)); ws.value=Math.max(0,Math.min(100,wc+(Math.random()-0.5)*5)); updateParameters(); },CONFIG.UPDATE_INTERVAL); console.log('✅ Sistema inicializado | 📧 Informes con nombre de usuario listos'); });
+    </script>
+</body>
+</html>
